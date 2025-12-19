@@ -1,3 +1,3 @@
-module github.com/joshuazhou744/goshelltools.git
+module goshelltools
 
 go 1.22.3

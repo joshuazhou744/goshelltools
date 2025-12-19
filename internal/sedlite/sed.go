@@ -1,9 +1,9 @@
 package sedlite // package name
 
 import (
-	"bufio"  // provides buffered I/O, will use to read files line by line
-	"errors" // error handling
-	"fmt"
+	"bufio"   // provides buffered I/O, will use to read files line by line
+	"errors"  // error handling
+	"fmt"     // formatted I/O
 	"io"      // basic I/O interfaces (Reader, Writer)
 	"os"      // access to operating system functionality (files, stdin, cmd arguments)
 	"regexp"  // regular expression matching and text replacement
@@ -18,6 +18,8 @@ const (
 	CommandSubstitute CommandType = iota // iota starts at 0 and increments by 1 for each constant
 	CommandDelete                        // 1
 	CommandPrint                         // 2
+	CommandPrintAll                      // 3
+	CommandQuit                          // 4
 )
 
 // structure for one fully parsed sed command
@@ -27,7 +29,7 @@ type Command struct {
 	Replacement string // only used for substitution
 }
 
-func Run(command string, file string) error {
+func Run(command string, file string, noPrint bool) error {
 	cmd, err := parseCommand(command)
 
 	// if error, return it
@@ -37,17 +39,51 @@ func Run(command string, file string) error {
 
 	// defines the reader as a variable of type io.Reader (comes after the name in go)
 	// for example we can use os.Stdin which reads from standard input (command line)
-	var reader io.Reader = os.Stdin
+	var reader io.Reader
+
+	if file != "" {
+		f, err := os.Open(file) // open the file
+		if err != nil {
+			return err
+		}
+
+		defer f.Close() // ensure the file is closed when Run exits to prevent resource leaks
+		reader = f      // set reader to the opened file
+	} else {
+		reader = os.Stdin // set reader to standard input
+	}
 
 	// read the reader line by line using a budio.Scanner
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text() // get a line of text from the scanner
+		printLine := !noPrint  // by default we print the line unless noPrint is true
 
 		switch cmd.Type {
 		case CommandSubstitute:
-			out := cmd.Regex.ReplaceAllString(line, cmd.Replacement) // apply regex substitution
-			fmt.Println(out)                                         // print the modified line
+			line = cmd.Regex.ReplaceAllString(line, cmd.Replacement) // apply regex substitution
+		case CommandDelete:
+			if cmd.Regex.MatchString(line) {
+				printLine = false // do not print the line if it matches the regex
+			}
+		case CommandPrint:
+			if cmd.Regex.MatchString(line) {
+				fmt.Println(line) // print the line if regex is found in line (matching)
+			}
+			printLine = false // prevent default print (only print if matched)
+		case CommandQuit:
+			if cmd.Regex.MatchString(line) {
+				if printLine {
+					fmt.Println(line)
+				}
+				return nil // exit the program if matched
+			}
+		case CommandPrintAll:
+			fmt.Println(line) // explicitly print the line
+		}
+
+		if printLine {
+			fmt.Println(line) // print the line if printLine is true
 		}
 	}
 
@@ -58,9 +94,81 @@ func Run(command string, file string) error {
 func parseCommand(input string) (*Command, error) {
 	if strings.HasPrefix(input, "s/") {
 		return parseSubstitute(input)
+	} else if strings.HasPrefix(input, "/") {
+		if strings.HasSuffix(input, "/d") {
+			return parseDelete(input)
+		} else if strings.HasSuffix(input, "/p") {
+			return parsePrint(input)
+		} else if strings.HasSuffix(input, "/q") {
+			return parseQuit(input)
+		}
+	} else if input == "p" {
+		return printAll()
 	}
 
 	return nil, errors.New("unsupported command")
+}
+
+// parse delete command
+func parseDelete(input string) (*Command, error) {
+	if len(input) < 4 || !strings.HasPrefix(input, "/") || !strings.HasSuffix(input, "/d") {
+		return nil, errors.New("invalid delete syntax")
+	}
+
+	pattern := input[1 : len(input)-2]
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Command{
+		Type:  CommandDelete,
+		Regex: re,
+	}, nil
+}
+
+// parse print matching command
+func parsePrint(input string) (*Command, error) {
+	if len(input) < 4 || !strings.HasPrefix(input, "/") || !strings.HasSuffix(input, "/p") {
+		return nil, errors.New("invalid print syntax")
+	}
+
+	pattern := input[1 : len(input)-2]
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Command{
+		Type:  CommandPrint,
+		Regex: re,
+	}, nil
+}
+
+// parste quit command
+func parseQuit(input string) (*Command, error) {
+	if len(input) < 4 || !strings.HasPrefix(input, "/") || !strings.HasSuffix(input, "/q") {
+		return nil, errors.New("invalid quit syntax")
+	}
+
+	re, err := regexp.Compile(input[1 : len(input)-2])
+	if err != nil {
+		return nil, err
+	}
+
+	return &Command{
+		Type:  CommandQuit,
+		Regex: re,
+	}, nil
+}
+
+// print all command
+func printAll() (*Command, error) {
+	return &Command{
+		Type: CommandPrintAll,
+	}, nil
 }
 
 // parse substitute command

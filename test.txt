@@ -1,0 +1,4 @@
+hello
+error happened
+bye
+poopyerror

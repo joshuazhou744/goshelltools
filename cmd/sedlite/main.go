@@ -8,17 +8,38 @@ import (
 	"fmt" // output text (stdout)
 	"os"  // reads command line arguments
 
-	"github.com/joshuazhou744/goshelltools.git/internal/sedlite"
+	"goshelltools/internal/sedlite" // import our sedlite package
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("usage: sedlite 's/pattern/replacement/' [file](optional)")
+		fmt.Println("example usage: ./sedlite -n 's/pattern/replacement/' [fileName](optional)")
 		os.Exit(1) // exit with error code 1 (0 is success, anything else is error)
 	}
 
-	command := os.Args[1] // sedlite
-	err := sedlite.Run(command, "")
+	args := os.Args[1:] // skip program name
+
+	noPrint := false
+
+	// detect -n flag
+	if args[0] == "-n" {
+		noPrint = true
+		args = args[1:] // remove -n from args
+	}
+
+	if len(args) < 1 {
+		fmt.Println("error: missing sedlite command")
+		os.Exit(1)
+	}
+
+	command := args[0]
+	file := ""
+	if len(args) >= 2 {
+		file = args[1]
+	}
+
+	err := sedlite.Run(command, file, noPrint)
+
 	if err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)
