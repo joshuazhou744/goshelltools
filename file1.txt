@@ -1,0 +1,4 @@
+hello
+error one
+bye
+hello error

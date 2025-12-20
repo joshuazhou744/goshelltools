@@ -29,57 +29,76 @@ type Command struct {
 	Replacement string // only used for substitution
 }
 
-func Run(command string, file string, noPrint bool) error {
-	cmd, err := parseCommand(command)
+func Run(commands []string, files []string, noPrint bool) error {
+	cmds, err := parseCommands(commands)
 
 	// if error, return it
 	if err != nil {
 		return err
 	}
 
-	// defines the reader as a variable of type io.Reader (comes after the name in go)
-	// for example we can use os.Stdin which reads from standard input (command line)
-	var reader io.Reader
+	if len(files) == 0 {
+		_, err := runOnReader(cmds, os.Stdin, noPrint)
+		return err
+	}
 
-	if file != "" {
+	for _, file := range files {
 		f, err := os.Open(file) // open the file
 		if err != nil {
 			return err
 		}
 
-		defer f.Close() // ensure the file is closed when Run exits to prevent resource leaks
-		reader = f      // set reader to the opened file
-	} else {
-		reader = os.Stdin // set reader to standard input
+		quit, runErr := runOnReader(cmds, f, noPrint)
+		if closeErr := f.Close(); closeErr != nil && runErr == nil {
+			runErr = closeErr
+		}
+		if runErr != nil {
+			return runErr
+		}
+		if quit {
+			return nil
+		}
 	}
 
+	return nil
+}
+
+func runOnReader(cmds []*Command, reader io.Reader, noPrint bool) (bool, error) {
 	// read the reader line by line using a budio.Scanner
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text() // get a line of text from the scanner
 		printLine := !noPrint  // by default we print the line unless noPrint is true
+		skipRemaining := false
 
-		switch cmd.Type {
-		case CommandSubstitute:
-			line = cmd.Regex.ReplaceAllString(line, cmd.Replacement) // apply regex substitution
-		case CommandDelete:
-			if cmd.Regex.MatchString(line) {
-				printLine = false // do not print the line if it matches the regex
+		for _, cmd := range cmds {
+			if skipRemaining {
+				break
 			}
-		case CommandPrint:
-			if cmd.Regex.MatchString(line) {
-				fmt.Println(line) // print the line if regex is found in line (matching)
-			}
-			printLine = false // prevent default print (only print if matched)
-		case CommandQuit:
-			if cmd.Regex.MatchString(line) {
-				if printLine {
-					fmt.Println(line)
+
+			switch cmd.Type {
+			case CommandSubstitute:
+				line = cmd.Regex.ReplaceAllString(line, cmd.Replacement) // apply regex substitution
+			case CommandDelete:
+				if cmd.Regex.MatchString(line) {
+					printLine = false // do not print the line if it matches the regex
+					skipRemaining = true
 				}
-				return nil // exit the program if matched
+			case CommandPrint:
+				if cmd.Regex.MatchString(line) {
+					fmt.Println(line) // print the line if regex is found in line (matching)
+				}
+				printLine = false // prevent default print (only print if matched)
+			case CommandQuit:
+				if cmd.Regex.MatchString(line) {
+					if printLine {
+						fmt.Println(line)
+					}
+					return true, nil // exit the program if matched
+				}
+			case CommandPrintAll:
+				fmt.Println(line) // explicitly print the line
 			}
-		case CommandPrintAll:
-			fmt.Println(line) // explicitly print the line
 		}
 
 		if printLine {
@@ -87,7 +106,24 @@ func Run(command string, file string, noPrint bool) error {
 		}
 	}
 
-	return scanner.Err()
+	return false, scanner.Err()
+}
+
+func parseCommands(inputs []string) ([]*Command, error) {
+	if len(inputs) == 0 {
+		return nil, errors.New("missing sedlite command")
+	}
+
+	cmds := make([]*Command, 0, len(inputs))
+	for _, input := range inputs {
+		cmd, err := parseCommand(input)
+		if err != nil {
+			return nil, err
+		}
+		cmds = append(cmds, cmd)
+	}
+
+	return cmds, nil
 }
 
 // parse command helper function (match the command type and call the appropriate parser)

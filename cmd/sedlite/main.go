@@ -32,13 +32,37 @@ func main() {
 		os.Exit(1)
 	}
 
-	command := args[0]
-	file := ""
-	if len(args) >= 2 {
-		file = args[1]
+	commands := []string{}
+	files := []string{}
+
+	if args[0] == "-e" {
+		for i := 0; i < len(args); {
+			if args[i] == "-e" {
+				if i+1 >= len(args) {
+					fmt.Println("error: -e flag requires a command")
+					os.Exit(1)
+				}
+				commands = append(commands, args[i+1])
+				i += 2
+				continue
+			}
+
+			files = append(files, args[i]) // add file
+			i++
+		}
+	} else {
+		commands = append(commands, args[0])
+		if len(args) >= 2 {
+			files = append(files, args[1:]...) // append each remaining arg as a file
+		}
 	}
 
-	err := sedlite.Run(command, file, noPrint)
+	if len(commands) == 0 {
+		fmt.Println("error: missing sedlite command")
+		os.Exit(1)
+	}
+
+	err := sedlite.Run(commands, files, noPrint)
 
 	if err != nil {
 		fmt.Println("error:", err)
