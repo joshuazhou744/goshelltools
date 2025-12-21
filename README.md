@@ -35,21 +35,15 @@ goshelltools/
 
 ## `findlite`
 
-### Commands
-- 
-
-### Flags
+### Expressions
 - `-name`: Find matching file/directory name
 - `-iname`: Find matching case-insensitive name
-- `-path`: Find exact matching path
+- `-path`: Find matching path
 - `-maxdepth` / `-mindepth`: Limit to maximum/minimum depth
-- `-empty`: Find empty files
+- `-empty`: Find empty files and directories
 - `-type`: Find file by type
 - `-size`: Find file by size
 - `-mtime`: Find by modified time
-- `-perm`: Find by permissions
-
-### Actions
 - `-print`: Print the path (by default)
 - `-delete`: Delete the found file(s)
 
