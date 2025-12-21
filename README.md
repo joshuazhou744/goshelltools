@@ -54,7 +54,12 @@ Build
 go build -o toolname /path/to/main.go
 ```
 
-Run
+Run `sedlite`
 ```bash
 ./sedlite [command] [fileName](optional)
+```
+
+Run `findlite`
+```bash
+./sedlite [path] [expression(s)]
 ```
