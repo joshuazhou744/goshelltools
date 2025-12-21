@@ -3,7 +3,7 @@
 // the function main() inside package main is the entry point
 package main
 
-// import packages from the standard library
+// import packages from the st	andard library
 import (
 	"fmt" // output text (stdout)
 	"os"  // reads command line arguments

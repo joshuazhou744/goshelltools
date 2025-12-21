@@ -1,4 +1,4 @@
-package sedlite // package name
+package sedlite
 
 import (
 	"bufio"   // provides buffered I/O, will use to read files line by line
