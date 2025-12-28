@@ -24,11 +24,11 @@ goshelltools/
 ## `sedlite`
 
 ### Commands
-- Substitute: `s/pattern/replacement/`
-- Delete entire line of the pattern (all instances): `/pattern/d`
-- Print matching: `/pattern/p`
-- Quit after pattern is found: `/pattern/q`
-- Print all lines: `p`
+- `s/pattern/replacement/`: Substitute
+- `/pattern/d`: Delete entire line of the pattern (all instances)
+- `/pattern/p`: Print matching
+- `/pattern/q`: Quit after pattern is found
+- `p`: Print all lines
 
 ### Flags
 - `-n`: Disable default printing (no-print flag)
