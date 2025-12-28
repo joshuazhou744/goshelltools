@@ -61,5 +61,5 @@ Run `sedlite`
 
 Run `findlite`
 ```bash
-./sedlite [path] [expression(s)]
+./findlite [path] [expression(s)]
 ```
